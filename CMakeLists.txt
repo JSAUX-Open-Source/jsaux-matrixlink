@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.16)
+project(JsauxPixelCompatibility VERSION 1.2 LANGUAGES CXX)
+if(NOT UNIX OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  message(FATAL_ERROR "Build the PIXEL policy tests on 64-bit Linux.")
+endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui)
+
+# Opensource tip: policy unit tests only (no settings-ui / gamepad / closed hooks).
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(jsaux-policy-tests tests/policy_tests.cpp)
+  target_include_directories(jsaux-policy-tests PRIVATE src/daemon)
+  target_link_libraries(jsaux-policy-tests PRIVATE Qt6::Core Qt6::Gui)
+  add_test(NAME refresh-and-render-policy COMMAND jsaux-policy-tests)
+endif()

@@ -1,0 +1,21 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=JSAUX PIXEL Studio (closed companion required)
+Name[en]=JSAUX PIXEL Studio (closed companion required)
+Name[en_US]=JSAUX PIXEL Studio (closed companion required)
+Name[zh]=JSAUX PIXEL Studio（需闭源伴生）
+Name[zh_CN]=JSAUX PIXEL Studio（需闭源伴生）
+Comment=Not shipped in the opensource tip — install the official closed release for Studio/daemon
+Comment[en]=Not shipped in the opensource tip — install the official closed release for Studio/daemon
+Comment[en_US]=Not shipped in the opensource tip — install the official closed release for Studio/daemon
+Comment[zh]=开源 tip 不附带 Studio/daemon，请使用官方闭源发行物
+Comment[zh_CN]=开源 tip 不附带 Studio/daemon，请使用官方闭源发行物
+# Do not Exec a missing closed binary from the opensource tip.
+Exec=/usr/bin/bash -c 'echo "JSAUX PIXEL Studio is not included in the opensource tip. Install the official closed release for companion/daemon/Studio."; read -r _'
+Icon=jsaux-matrixlink
+Terminal=true
+Categories=Utility;
+StartupNotify=false
+Keywords=JSAUX;PIXEL;Opensource;Companion;
+NoDisplay=false

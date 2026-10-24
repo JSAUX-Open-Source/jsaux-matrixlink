@@ -1,0 +1,13 @@
+# Placeholder only — the opensource tip does not ship jsaux-matrix-daemon.
+# Install the official closed companion package if you need this user service.
+[Unit]
+Description=JSAUX Matrix Hub (closed companion — not included in opensource tip)
+ConditionPathExists=%h/.local/bin/jsaux-matrix-daemon
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/jsaux-matrix-daemon --port 39052 --events-port 39053
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,15 @@
+{
+  "name": "JSAUX PIXEL",
+  "author": "JSAUX",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": [
+      "jsaux",
+      "rgb",
+      "display",
+      "usb"
+    ],
+    "description": "Quick Game Mode controls for the JSAUX PIXEL daemon."
+  }
+}

@@ -1,0 +1,15 @@
+JSAUX PIXEL 开源 tip 说明
+========================
+
+本目录不是完整离线产品安装包。
+
+适用产品：Pixel Matrix Faceplate for Steam Machine（对应官方软件线 V1.2 / tip 版本 1.2.0）。
+日常使用请安装官方发行版：
+https://jsaux.com/pages/steam-machine-faceplate-app-installation-guide
+
+公开 tip 开源：USB 连接协议文档与参考编解码、LED 矩阵 API、Decky 插件源码。
+不属于本发行：固件、制造工具与官方伴生应用（daemon / Studio 等）。
+
+AI Agent 仅显示本机会话名与是否运行中（不联网、无额度接口）。
+
+更多说明见仓库根 README / README-zh.md 与 docs/protocols/。

@@ -1,0 +1,9 @@
+*.cpp text eol=lf
+*.h text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+*.desktop text eol=lf
+packaging/installer-template/** text eol=lf

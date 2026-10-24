@@ -1,0 +1,37 @@
+JSAUX PIXEL / MatrixLink — third-party notices (opensource tip)
+==============================================================
+
+This repository’s own open sources are MIT-licensed (see LICENSE).
+
+This tip does **not** redistribute:
+  - Closed companion ELFs (jsaux-matrix-daemon, jsaux-matrix-studio-v12, …)
+  - Private companion hook libraries
+  - Qt runtime shared libraries for the closed companion installer
+  - Bundled Codex / ChatGPT CLI binaries
+  - Desktop settings-ui / gamepad extension sources
+
+If you obtain a closed product installer separately, that package’s own
+LICENSE/NOTICE (including Qt LGPL obligations and any bundled CLI licenses)
+apply to those redistributables — not the MIT license of this opensource tip.
+
+Policy unit tests may link Qt headers/libraries at build time on Linux; this
+repository does not ship Qt binaries. When you redistribute a binary that
+dynamically links Qt, follow the Qt license that applies to your Qt build
+(typically LGPL for official open-source Qt builds) and ship any required
+notices/source offers with *your* binary distribution.
+
+## Host / loader components
+
+Decky Loader, SteamOS / Steam Machine host components remain under their
+upstream licenses.
+
+## UI bundle third-party helpers
+
+`decky-plugin/dist/index.js` is a checked-in Decky UI bundle. It may embed
+helpers patterned after:
+
+- Decky Loader / `@decky/ui` / `@decky/api` style client APIs
+- React and related frontend runtime helpers used by Decky plugins
+
+Those upstream components remain under their own licenses. MIT in this
+repository covers JSAUX-authored orchestration, protocol codecs, and docs only.

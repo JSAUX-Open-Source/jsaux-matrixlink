@@ -1,0 +1,34 @@
+# OS / editor
+.DS_Store
+*.log
+
+# Python / Node / CMake
+**/__pycache__/
+*.pyc
+**/build/
+/build/
+**/node_modules/
+/node_modules/
+/release/
+/tmp/
+*.o
+*.so
+*.dylib
+*.dll
+*.pkg.tar.zst
+*.zip
+*.tar.gz
+
+# Secrets / local runtime
+.env
+.env.*
+secrets/
+auth.json
+*.auth.json
+.codex/
+decky-plugin/data/
+source_snapshot/
+
+# Keep the checked-in Decky frontend bundle
+!decky-plugin/dist/
+!decky-plugin/dist/index.js

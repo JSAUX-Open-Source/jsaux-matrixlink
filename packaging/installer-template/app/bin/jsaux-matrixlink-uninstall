@@ -1,0 +1,250 @@
+# Opensource tip uninstall helper.
+# Also removes leftover closed-companion paths if a user previously installed the official package.
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -r "$SCRIPT_DIR/ui-language.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/ui-language.sh"
+elif [[ -r "$SCRIPT_DIR/jsaux-ui-language.sh" ]]; then
+  # Installed copies use the explicit helper name to avoid collisions.
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/jsaux-ui-language.sh"
+else
+  jsaux_init_ui_language() { JSAUX_UI_LANGUAGE=en; export JSAUX_UI_LANGUAGE; }
+  jsaux_ui() { printf '%s' "${1:-}"; }
+fi
+jsaux_init_ui_language
+
+SCRIPT_PATH="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+
+show_dialog() {
+  local kind="$1"
+  local message="$2"
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v kdialog >/dev/null 2>&1; then
+    if [[ "$kind" == "success" ]]; then
+      kdialog --title "JSAUX PIXEL" --msgbox "$message" 2>/dev/null || true
+    else
+      kdialog --title "JSAUX PIXEL" --error "$message" 2>/dev/null || true
+    fi
+    return 0
+  fi
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
+    if [[ "$kind" == "success" ]]; then
+      zenity --info --title="JSAUX PIXEL" --text="$message" 2>/dev/null || true
+    else
+      zenity --error --title="JSAUX PIXEL" --text="$message" 2>/dev/null || true
+    fi
+    return 0
+  fi
+  return 1
+}
+
+if [[ ${EUID} -ne 0 ]]; then
+  jsaux_ui uninstall_start
+  set +e
+  UNINSTALL_STATUS=126
+  if command -v pkexec >/dev/null 2>&1; then
+    pkexec env \
+      TARGET_USER="${TARGET_USER:-${USER:-deck}}" \
+      JSAUX_UI_LANGUAGE="$JSAUX_UI_LANGUAGE" \
+      "$SCRIPT_PATH" "$@"
+    UNINSTALL_STATUS=$?
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo env \
+      TARGET_USER="${TARGET_USER:-${USER:-deck}}" \
+      JSAUX_UI_LANGUAGE="$JSAUX_UI_LANGUAGE" \
+      "$SCRIPT_PATH" "$@"
+    UNINSTALL_STATUS=$?
+  else
+    jsaux_ui admin_required "$SCRIPT_PATH" >&2
+    UNINSTALL_STATUS=1
+  fi
+  if [[ "$UNINSTALL_STATUS" -eq 126 || "$UNINSTALL_STATUS" -eq 127 ]] \
+    && command -v sudo >/dev/null 2>&1; then
+    # pkexec could not obtain authorization (no polkit authentication
+    # agent in the session).  Retry with sudo in the terminal, matching
+    # the installer's fallback.
+    sudo env \
+      TARGET_USER="${TARGET_USER:-${USER:-deck}}" \
+      JSAUX_UI_LANGUAGE="$JSAUX_UI_LANGUAGE" \
+      "$SCRIPT_PATH" "$@"
+    UNINSTALL_STATUS=$?
+  fi
+  set -e
+
+  if [[ "$UNINSTALL_STATUS" -eq 0 ]]; then
+    RESULT_MESSAGE="$(jsaux_ui uninstall_success_dialog)"
+    jsaux_ui uninstall_done_short
+    if show_dialog success "$RESULT_MESSAGE"; then
+      exit 0
+    fi
+  else
+    RESULT_MESSAGE="$(jsaux_ui uninstall_failure_dialog "$UNINSTALL_STATUS")"
+    jsaux_ui uninstall_failure_short "$UNINSTALL_STATUS" >&2
+    show_dialog failure "$RESULT_MESSAGE" || true
+  fi
+
+  if [[ -t 0 ]]; then
+    echo
+    jsaux_ui close_prompt
+    read -r _ || true
+  fi
+  exit "$UNINSTALL_STATUS"
+fi
+
+jsaux_ui uninstall_start
+TARGET_USER="${TARGET_USER:-${SUDO_USER:-deck}}"
+if ! TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)" || [[ -z "$TARGET_HOME" ]]; then
+  jsaux_ui target_home_missing "$TARGET_USER" >&2
+  exit 1
+fi
+if ! TARGET_UID="$(id -u "$TARGET_USER")"; then
+  jsaux_ui target_user_missing "$TARGET_USER" >&2
+  exit 1
+fi
+if [[ -z "$TARGET_HOME" || "$TARGET_HOME" == "/" || "$TARGET_HOME" != /* ]]; then
+  jsaux_ui unsafe_home "$TARGET_HOME" >&2
+  exit 1
+fi
+
+BIN_DIR="$TARGET_HOME/.local/bin"
+APPLICATIONS_DIR="$TARGET_HOME/.local/share/applications"
+ICONS_DIR="$TARGET_HOME/.local/share/icons/hicolor/scalable/apps"
+SYSTEMD_USER_DIR="$TARGET_HOME/.config/systemd/user"
+RUNTIME_DIR="$TARGET_HOME/.local/lib/jsaux-matrixlink"
+MANGOHUD_GLOBAL_DIR="$TARGET_HOME/.config/MangoHud"
+PLASMA_ENV_DIR="$TARGET_HOME/.config/plasma-workspace/env"
+PLASMA_MANGOHUD_ENV="$PLASMA_ENV_DIR/jsaux-matrixlink-mangohud.sh"
+ENVIRONMENT_D_DIR="$TARGET_HOME/.config/environment.d"
+MANGOHUD_ENVIRONMENT_FILE="$ENVIRONMENT_D_DIR/90-jsaux-matrixlink-mangohud.conf"
+DESKTOP_SHORTCUT="$TARGET_HOME/Desktop/JSAUX PIXEL.desktop"
+LEGACY_DESKTOP_SHORTCUT="$TARGET_HOME/Desktop/JSAUX MatrixLink.desktop"
+DECKY_PLUGIN_DIR="$TARGET_HOME/homebrew/plugins/Jsaux-Matrix-Display"
+LEGACY_PLUGIN_DIR="$TARGET_HOME/homebrew/plugins/JSAUX-Matrix-Hub"
+DECKY_SETTINGS_DIR="$TARGET_HOME/homebrew/settings/Jsaux-Matrix-Display"
+DECKY_SETTINGS_FILE="$TARGET_HOME/homebrew/settings/Jsaux-Matrix-Display.json"
+DECKY_DATA_DIR="$TARGET_HOME/homebrew/data/Jsaux-Matrix-Display"
+DECKY_LOG_DIR="$TARGET_HOME/homebrew/logs/Jsaux-Matrix-Display"
+DAEMON_CONFIG_DIR="$TARGET_HOME/.config/JSAUX/jsaux-matrix-daemon"
+CUSTOM_DATA_DIR="$TARGET_HOME/.local/share/jsaux-matrix"
+CACHE_DIR="$TARGET_HOME/.cache/jsaux-matrixlink"
+BACKUP_ROOT="$TARGET_HOME/.local/share/jsaux-matrixlink-backups"
+INSTALL_LOG_DESKTOP="$TARGET_HOME/Desktop/JSAUX-PIXEL-Install.log"
+INSTALL_LOG_HOME="$TARGET_HOME/JSAUX-PIXEL-Install.log"
+LEGACY_INSTALL_LOG_DESKTOP="$TARGET_HOME/Desktop/JSAUX-MatrixLink-Install.log"
+LEGACY_INSTALL_LOG_HOME="$TARGET_HOME/JSAUX-MatrixLink-Install.log"
+RUNTIME_USER_DIR="/run/user/$TARGET_UID"
+SERVICE_WANTS_LINK="$SYSTEMD_USER_DIR/default.target.wants/jsaux-matrix-hub.service"
+LEGACY_UDEV_RULE="/etc/udev/rules.d/99-jsaux-matrix-hub.rules"
+
+run_user_systemctl() {
+  runuser -u "$TARGET_USER" -- env \
+    HOME="$TARGET_HOME" \
+    JSAUX_UI_LANGUAGE="$JSAUX_UI_LANGUAGE" \
+    XDG_RUNTIME_DIR="/run/user/$TARGET_UID" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$TARGET_UID/bus" \
+    systemctl --user "$@"
+}
+
+PLUGIN_LOADER_WAS_ACTIVE=0
+if systemctl is-active --quiet plugin_loader.service; then
+  PLUGIN_LOADER_WAS_ACTIVE=1
+fi
+
+restore_plugin_loader() {
+  if [[ "$PLUGIN_LOADER_WAS_ACTIVE" -eq 1 ]]; then
+    systemctl restart plugin_loader.service 2>/dev/null || true
+  fi
+}
+
+trap restore_plugin_loader EXIT
+
+exec 9>"$TARGET_HOME/.local/share/jsaux-matrixlink-install.lock"
+if ! flock -n 9; then echo "Another JSAUX PIXEL installation or uninstall is running." >&2; exit 1; fi
+jsaux_ui uninstall_stop
+run_user_systemctl disable --now jsaux-matrix-hub.service 2>/dev/null || true
+if [[ -f "$BIN_DIR/jsaux-release-support.py" ]]; then
+  python3 "$BIN_DIR/jsaux-release-support.py" stop-desktop --home "$TARGET_HOME"
+else
+  pkill -f "^$BIN_DIR/jsaux-matrix-studio(-v12)?( |$)" 2>/dev/null || true
+fi
+pkill -f "^$BIN_DIR/jsaux-matrix-daemon( |$)" 2>/dev/null || true
+systemctl stop plugin_loader.service 2>/dev/null || true
+
+if [[ -f "$BIN_DIR/jsaux-release-support.py" ]]; then
+  python3 "$BIN_DIR/jsaux-release-support.py" cleanup --home "$TARGET_HOME"
+fi
+if [[ -f "$RUNTIME_DIR/refresh/jsaux_game_fps.py" ]]; then
+  runuser -u "$TARGET_USER" -- python3 "$RUNTIME_DIR/refresh/jsaux_game_fps.py" --cleanup || true
+fi
+rm -f "$RUNTIME_USER_DIR/jsaux-pixel-fps/state.json" "$RUNTIME_USER_DIR/jsaux-pixel-fps/state.tmp" "$RUNTIME_USER_DIR/jsaux-pixel-fps/disabled.sample"
+rmdir "$RUNTIME_USER_DIR/jsaux-pixel-fps" 2>/dev/null || true
+jsaux_ui uninstall_remove
+rm -f \
+  "$BIN_DIR/jsaux-matrix-studio" \
+  "$BIN_DIR/jsaux-matrix-daemon" \
+  "$APPLICATIONS_DIR/jsaux-matrixlink.desktop" \
+  "$APPLICATIONS_DIR/jsaux-matrixlink-uninstall.desktop" \
+  "$APPLICATIONS_DIR/jsaux-matrix-hub.desktop" \
+  "$DESKTOP_SHORTCUT" \
+  "$LEGACY_DESKTOP_SHORTCUT" \
+  "$ICONS_DIR/jsaux-matrixlink.svg" \
+  "$ICONS_DIR/jsaux-matrix-hub.svg" \
+  "$SYSTEMD_USER_DIR/jsaux-matrix-hub.service" \
+  "$SERVICE_WANTS_LINK" \
+  "$INSTALL_LOG_DESKTOP" \
+  "$INSTALL_LOG_HOME" \
+  "$LEGACY_INSTALL_LOG_DESKTOP" \
+  "$LEGACY_INSTALL_LOG_HOME" \
+  "$RUNTIME_USER_DIR/jsaux-matrix-studio.lock" \
+  "$RUNTIME_USER_DIR/jsaux-matrix-studio.socket" \
+  "$RUNTIME_USER_DIR/jsaux-pixel-fps.sample"
+
+rm -rf "$RUNTIME_DIR"
+rm -f "$MANGOHUD_GLOBAL_DIR/jsaux-matrixlink.conf" "$PLASMA_MANGOHUD_ENV"
+rm -f "$MANGOHUD_ENVIRONMENT_FILE"
+rmdir "$MANGOHUD_GLOBAL_DIR" 2>/dev/null || true
+rmdir "$PLASMA_ENV_DIR" 2>/dev/null || true
+rmdir "$ENVIRONMENT_D_DIR" 2>/dev/null || true
+rm -rf "$DECKY_PLUGIN_DIR" "$LEGACY_PLUGIN_DIR"
+rm -rf "$DECKY_SETTINGS_DIR"
+rm -f "$DECKY_SETTINGS_FILE"
+rm -rf "$DECKY_DATA_DIR" "$DECKY_LOG_DIR"
+rm -rf "$DAEMON_CONFIG_DIR"
+rm -rf "$CUSTOM_DATA_DIR"
+rm -rf "$CACHE_DIR"
+rm -rf "$BACKUP_ROOT"
+rmdir "$TARGET_HOME/.config/JSAUX" 2>/dev/null || true
+rm -f "$LEGACY_UDEV_RULE"
+
+if run_user_systemctl show-environment 2>/dev/null | grep -Fq "MANGOHUD_CONFIG=read_cfg,autostart_log=1,log_interval=100,log_duration=0,log_versioning=1,output_folder=$RUNTIME_DIR/logs/mangohud"; then
+  run_user_systemctl unset-environment MANGOHUD_CONFIG || true
+fi
+run_user_systemctl daemon-reload || true
+if [[ "$PLUGIN_LOADER_WAS_ACTIVE" -eq 1 ]]; then
+  systemctl restart plugin_loader.service || true
+fi
+PLUGIN_LOADER_WAS_ACTIVE=0
+trap - EXIT
+
+jsaux_ui uninstall_refresh
+if command -v udevadm >/dev/null 2>&1; then
+  udevadm control --reload-rules 2>/dev/null || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+  runuser -u "$TARGET_USER" -- update-desktop-database "$APPLICATIONS_DIR" || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  runuser -u "$TARGET_USER" -- gtk-update-icon-cache -f -t "$TARGET_HOME/.local/share/icons/hicolor" || true
+fi
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+  runuser -u "$TARGET_USER" -- env HOME="$TARGET_HOME" kbuildsycoca6 --noincremental || true
+fi
+if command -v kbuildsycoca5 >/dev/null 2>&1; then
+  runuser -u "$TARGET_USER" -- env HOME="$TARGET_HOME" kbuildsycoca5 --noincremental || true
+fi
+
+jsaux_ui uninstall_done
+rm -f "$BIN_DIR/jsaux-matrixlink-uninstall" "$BIN_DIR/jsaux-ui-language.sh" "$BIN_DIR/jsaux-release-support.py" "$BIN_DIR/jsaux-matrix-studio-v12"
